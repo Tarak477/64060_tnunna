@@ -1,0 +1,107 @@
+---
+title: "Assignment-3"
+author: "TarakRam Nunna"
+date: "14/10/2021"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r}
+library(dplyr)
+library(reshape)
+library(reshape2)
+library(ggplot2)
+library(caret)
+library(ISLR)
+library(naivebayes)
+```
+# Setting Working directory.
+```{r}
+getwd()
+setwd("C:/Users/TARAKRAM/OneDrive/Desktop/ML_code/64060_tnunna/Assignment-3")
+BankData <- read.csv("UniversalBank.csv")
+str(BankData)
+```
+# Transforming online, credit card and personal loan coloumns data into categorical data
+```{r}
+BankData$Personal.Loan <- as.factor(BankData$Personal.Loan)
+BankData$Online = as.factor(BankData$Online)
+BankData$CreditCard = as.factor(BankData$CreditCard)
+```
+# partitioning the data as follows: training = 60% and testing = 40%
+```{r}
+set.seed(300)
+Index <- createDataPartition(BankData$Income, p=0.6, list = FALSE)
+Train_Data <- BankData[Index,]
+Test_Data <- BankData[-Index,]
+```
+
+# A. Creating a pivot table for the training data with Online as a column variable, CC as a row variable, and Loan as a secondary row variable. The values inside the table should convey the count. In R use functions melt() and cast()
+```{r}
+set.seed(300)
+Melt_Train <- melt(Train_Data,id=c("CreditCard","Personal.Loan"),variable= "Online")
+cast_Train <- dcast(Melt_Train,CreditCard+Personal.Loan~Online)
+cast_Train <-cast_Train[c(1,2,14)]
+cast_Train
+```
+
+# B.  The probability that this customer will accept the loan offer
+
+The probability of loan acceptance (Loan = 1) conditional on
+having a bank credit card (CC = 1) and being an active user of online banking services (Online = 1). 
+
+P(Loan=1 | CC=1, Online=1) = 81/790 = 0.1025
+
+# C.Create two separate pivot tables for the training data. Onewill have Loan (rows) as a function of Online (columns) and the other will have Loan (rows) as a function of CC.
+```{r}
+set.seed(300)
+Melt_Train1 <- melt(Train_Data,id=c("Personal.Loan"),variable = "Online")
+cast_Train1  <- dcast(Melt_Train1,Personal.Loan~Online)
+cast_Train1 <-cast_Train1[c(1,13)]
+cast_Train1
+set.seed(300)
+Melt_Train2 <- melt(Train_Data,id=c("CreditCard"),variable = "Online")
+cast_Train2 <- dcast(Melt_Train2,CreditCard~Online)
+cast_Train2 <-cast_Train2[c(1,14)]
+cast_Train2
+```
+
+```{r}
+Train_Data1 <- Train_Data[c(13,10,14)]
+table(Train_Data1[,c(3,2)])
+table(Train_Data1[,c(1,2)])
+table(Train_Data1[,c(2)])
+```
+# D.Compute the following quantities [P(A | B) means “the probability ofA given B”]:
+
+i. P(CC = 1 | Loan = 1) = 81/(81+213) = 0.2755
+  
+ii.P(Online = 1 | Loan = 1) = 176/(176+118) = 0.5986
+
+iii.P(Loan = 1) = 294/(2708+294) = 0.0979
+
+iv.P(CC = 1 | Loan = 0) = 790/(790+1918) = 0.2917
+
+v.P(Online = 1 | Loan = 0) = 1630/(1630+1078) = 0.6019
+
+vi.P(Loan = 0) = 2708/(294+2708) = 0.9020
+
+# E.Use the quantities computed above to compute the naive Bayes probability P(Loan = 1 | CC = 1, Online = 1).
+## (P(CC = 1 | Loan = 1)*P(Online = 1 | Loan = 1)*P(Loan = 1))/ (P(CC = 1 | Loan = 1)*P(Online = 1 | Loan = 1)*P(Loan = 1))+(P(CC = 1 | Loan = 0)*P(Online = 1 | Loan = 0)*P(Loan = 0))
+```{r}
+(0.2755*0.5986*0.0979)/((0.2755*0.5986*0.0979)+(0.2917*0.6019*0.9020))
+```
+# F.Compare this value with the one obtained from the pivot table in (B). Which is a more accurate estimate.
+##  0.0925 are very similar to the 0.1025 the difference between the exact method and the naive-bayes method is the exact method would need the the exact same independent variable classifications to predict, where the naive bayes method does not.
+
+# G.Which of the entries in this table are needed for computing P(Loan = 1 | CC = 1, Online = 1)? Run naive Bayes on the data. Examine the model output on training data, and find the entry that corresponds to P(Loan = 1 | CC = 1, Online = 1). Compare this to the number you obtained in (E).
+```{r}
+set.seed(300)
+naivebayes <- naiveBayes(Personal.Loan~.,data=Train_Data1)
+naivebayes
+```
+```{r}
+(0.3159)*(0.5972)*(0.097)/((0.3159)*(0.5972)*(0.097) + (0.2971)*(0.6006)*(0.902))
+```
+# Values from the naiveBayes model probability 0.1020 is very similar to value of E i.e, 0.092.
