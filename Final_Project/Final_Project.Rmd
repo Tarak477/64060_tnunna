@@ -1,0 +1,150 @@
+---
+title: "FInal_project"
+author: "TarakRam Nunna"
+date: "06/12/2021"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+# Setting working Directory
+```{r}
+getwd()
+setwd("C:/Users/TARAKRAM/OneDrive/Desktop/ML_code/64060_tnunna/Final Project")
+```
+
+```{r}
+library(ggplot2)
+library(caTools)
+library(Amelia)
+library(caret)
+```
+
+
+```{r}
+adult_income <- read.csv("AdultIncome.csv")
+View(adult_income)
+str(adult_income)
+```
+
+# cleaning the data
+
+## combining factors of work class
+```{r}
+table(adult_income$workclass)
+adult_income$workclass <- as.character(adult_income$workclass)
+# combining work class of without-pay and never-worked as Unemployed
+adult_income$workclass[adult_income$workclass == "Without-pay" | adult_income$workclass == "Never-worked"] <- "Unemployed"
+# combining work class of state-gov and local-gov as State/Local-gov
+adult_income$workclass[adult_income$workclass == "State-gov" | adult_income$workclass == "Local-gov"] <- "State/Local-gov"
+# combining work class of self-emp-inc and self-emp-not-inc as Self-employed
+adult_income$workclass[adult_income$workclass == "Self-emp-inc" | adult_income$workclass == "Self-emp-not-inc"] <- "Self-employed"
+# we are not combining federal work class and private work class because both are different work classes
+table(adult_income$workclass)
+```
+
+## Combining factors of marital status
+```{r}
+table(adult_income$marital.status)
+adult_income$marital.status <- as.character(adult_income$marital.status)
+# Combining Married-AF-spouse, Married-civ-spouse and Married-spouse-absent as Married
+adult_income$marital.status[adult_income$marital.status == "Married-AF-spouse" | adult_income$marital.status == "Married-civ-spouse" | adult_income$marital.status == "Married-spouse-absent"] <- "Married"
+
+# Combining Divorced, Separated and Widowed as Not-Married
+adult_income$marital.status[adult_income$marital.status == "Divorced" | adult_income$marital.status == "Separated" | adult_income$marital.status == "Widowed"] <- "Not-Married"
+table(adult_income$marital.status)
+```
+
+## Combining factors of Country
+```{r}
+adult_income$native.country <- as.character(adult_income$native.country)
+# combining the below countries to North.America
+North.America <- c("Canada","Cuba","Dominican-Republic","El-Salvador","Guatemala","Haiti","Honduras","Jamaica","Mexico","Nicaragua","Outlying-US(Guam-USVI-etc)","Puerto-Rico","Trinadad&Tobago","United-States")
+# combining the below countries to Asia
+Asia <- c("Cambodia","China","Hong","India","Iran","Japan","Laos","Philippines","Taiwan","Thailand","Vietnam")
+# combining the below countries to South.America
+South.America <- c("Columbia","Ecuador","Peru")
+# combining the below countries to Europe
+Europe <- c("England", "France", "Germany", "Greece", "Holand-Netherlands", "Hungary", "Ireland", "Italy", "Poland", "Portugal", "Scotland", "Yugoslavia")
+# combining the below countries to others
+Others <- c("South","?")
+
+adult_income$native.country[adult_income$native.country %in% North.America] <- "North_America"
+adult_income$native.country[adult_income$native.country %in% Asia] <- "Asia"
+adult_income$native.country[adult_income$native.country %in% South.America] <- "South_America"
+adult_income$native.country[adult_income$native.country %in% Europe] <- "Europe"
+adult_income$native.country[adult_income$native.country %in% Others] <- "Others"
+table(adult_income$native.country)
+```
+```{r}
+# converting the below variables into factors
+adult_income$workclass <- as.factor(adult_income$workclass)
+adult_income$marital.status <- as.factor(adult_income$marital.status)
+adult_income$native.country <- as.factor(adult_income$native.country)
+str(adult_income)
+```
+
+# Now we deal with missing data
+```{r}
+table(adult_income$workclass)
+# assigning NA to the missing values
+adult_income[adult_income == "?"] <- NA
+# Converting Income to factors as well
+adult_income$income <- as.factor(adult_income$income)
+adult_income[adult_income$income == "<=50k"] <- "0"
+adult_income[adult_income$income == ">50k"] <- "1"
+table(adult_income$workclass)
+# omitting the NA values
+adult_income <- na.omit(adult_income)
+```
+
+# Exploring and analysing data
+```{r}
+# We have to understand the trends and representations of certain demographics
+ggplot(adult_income, aes(age)) + geom_histogram(aes(fill = income), color = "black", binwidth = 1)
+ggplot(adult_income, aes(hours.per.week)) + geom_histogram()
+ggplot(adult_income, aes(age)) + geom_histogram()
+```
+
+# Now we build our Logistic Regression Model
+## The purpose of this model is to classify people into two groups, below 50K or above 50K
+```{r}
+# now we split the data into 75% training and 25% testing
+Adult_split <- sample.split(adult_income$income, SplitRatio = 0.75)
+# we assigned training data to Adult_train
+Adult_Train <- subset(adult_income, Adult_split == TRUE,)
+# we assigned testing data to Adult_test
+Adult_Test <- subset(adult_income, Adult_split == FALSE)
+
+# Training the model
+Adult_income_model <- glm(income ~., family = binomial(), data =  Adult_Train)
+
+# Predicting the Salary class
+Prediction <- predict(Adult_income_model, Adult_Test, type = "response")
+```
+# Creating a confusion matrix
+```{r}
+table(Adult_Test$income, Prediction >= 0.7)
+```
+
+```{r}
+# Accuracy
+(5610+724)/(5610+157+1188+724)
+```
+
+```{r}
+# REcall
+5627/(5627+1190)
+
+#precision
+5627/(5627+722)
+```
+
+
+
+
+
+
+
+
